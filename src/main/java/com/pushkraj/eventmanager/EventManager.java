@@ -1,4 +1,4 @@
-package com.pushkraj.test;
+package com.pushkraj.eventmanager;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
