@@ -1,6 +1,16 @@
 name: EventManager+
-main: com.pushkraj.test.test
+main: com.pushkraj.eventmanager.EventManager
 version: 1.0
-api-version: 1.21
+api-version: '1.21'
 author: Pushkraj
-description: A PaperMC plugin for Minecraft 1.21.4
+description: A PaperMC plugin for Minecraft.
+commands:
+  eventmanager:
+    description: Opens the EventManager GUI.
+    usage: /<command>
+    aliases: [em]
+    permission: eventmanager.gui
+permissions:
+  eventmanager.gui:
+    description: Allows opening the EventManager GUI.
+    default: op
