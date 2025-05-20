@@ -1,0 +1,14 @@
+# EventManager Configuration
+
+# Access to dimensions
+block-nether: false
+block-end: false
+
+# Global chat mute status
+chat-muted-globally: false
+
+# Admin auto-vanish on join
+admin-auto-vanish: false
+
+# Auto-restart timer interval in minutes
+auto-restart-interval-minutes: 180
