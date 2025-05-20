@@ -1,4 +1,4 @@
-name: EventManager+
+name: EventManager
 main: com.pushkraj.eventmanager.EventManager
 version: 1.0
 api-version: '1.21'
