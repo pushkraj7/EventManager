@@ -64,12 +64,12 @@ public class EventManager extends JavaPlugin implements Listener {
         long ticks = autoRestartIntervalMinutes * 60 * 20; // minutes to ticks
         autoRestartTaskId = Bukkit.getScheduler().runTaskLater(this, () -> {
             Bukkit.broadcastMessage(ChatColor.RED + "[EventManager] Server is restarting in 1 minute!");
-            // Schedule actual restart command after a short delay (e.g., 1 minute)
             Bukkit.getScheduler().runTaskLater(this, () -> {
-                Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), "restart"); // Or "stop" if preferred
-            }, 20L * 60); // 1 minute in ticks
+                Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), "restart");
+            }, 20L * 60);
         }, ticks).getTaskId();
         autoRestartTimerEnabled = true;
+        saveAutoRestartConfig();
         getLogger().info("Auto restart timer enabled. Restart in " + autoRestartIntervalMinutes + " minutes.");
     }
 
@@ -80,6 +80,7 @@ public class EventManager extends JavaPlugin implements Listener {
             autoRestartTaskId = -1;
         }
         autoRestartTimerEnabled = false;
+        saveAutoRestartConfig();
         getLogger().info("Auto restart timer disabled.");
     }
     @Override
@@ -94,18 +95,17 @@ public class EventManager extends JavaPlugin implements Listener {
     private void loadConfigValues() {
         getConfig().addDefault("block-nether", false);
         getConfig().addDefault("block-end", false);
-        // No need to copy defaults if we are just reading and they might not exist yet.
-        // getFileConfiguration().options().copyDefaults(true);
-        // saveConfig(); // This would write defaults if not present, good for initial setup.
-
+        getConfig().addDefault("chat-muted-globally", false);
+        getConfig().addDefault("admin-auto-vanish", false);
+        getConfig().addDefault("auto-restart-interval-minutes", 180);
+        getConfig().addDefault("auto-restart-timer-enabled", false);
         blockNether = getConfig().getBoolean("block-nether", false);
         blockEnd = getConfig().getBoolean("block-end", false);
-        chatMutedGlobally = getConfig().getBoolean("chat-muted-globally", false); // Assuming you might want to save this too
-        adminAutoVanishEnabled = getConfig().getBoolean("admin-auto-vanish", false); // And this
+        chatMutedGlobally = getConfig().getBoolean("chat-muted-globally", false);
+        adminAutoVanishEnabled = getConfig().getBoolean("admin-auto-vanish", false);
         autoRestartIntervalMinutes = getConfig().getLong("auto-restart-interval-minutes", 180);
-        // autoRestartTimerEnabled is a runtime state, not typically saved directly unless you want to persist its state across restarts
-
-        getLogger().info("Loaded configuration: blockNether=" + blockNether + ", blockEnd=" + blockEnd);
+        autoRestartTimerEnabled = getConfig().getBoolean("auto-restart-timer-enabled", false);
+        getLogger().info("Loaded configuration: blockNether=" + blockNether + ", blockEnd=" + blockEnd + ", chatMutedGlobally=" + chatMutedGlobally + ", adminAutoVanishEnabled=" + adminAutoVanishEnabled + ", autoRestartIntervalMinutes=" + autoRestartIntervalMinutes + ", autoRestartTimerEnabled=" + autoRestartTimerEnabled);
     }
 
     private void saveDimensionAccessConfig() {
@@ -115,14 +115,17 @@ public class EventManager extends JavaPlugin implements Listener {
         getLogger().info("Saved dimension access configuration: blockNether=" + blockNether + ", blockEnd=" + blockEnd);
     }
 
-    // Example for saving other global settings if you decide to persist them
     private void saveGlobalSettingsConfig() {
         getConfig().set("chat-muted-globally", chatMutedGlobally);
         getConfig().set("admin-auto-vanish", adminAutoVanishEnabled);
-        getConfig().set("auto-restart-interval-minutes", autoRestartIntervalMinutes);
         saveConfig();
     }
 
+    private void saveAutoRestartConfig() {
+        getConfig().set("auto-restart-interval-minutes", autoRestartIntervalMinutes);
+        getConfig().set("auto-restart-timer-enabled", autoRestartTimerEnabled);
+        saveConfig();
+    }
     @Override
     public void onDisable() {
         stopAutoRestartTimer(); // Ensure timer is stopped on plugin disable
@@ -132,6 +135,17 @@ public class EventManager extends JavaPlugin implements Listener {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("eventmanager") || command.getName().equalsIgnoreCase("em")) {
+            if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
+                if (!sender.hasPermission("eventmanager.reload")) {
+                    sender.sendMessage(ChatColor.RED + "You do not have permission to reload the configuration.");
+                    return true;
+                }
+                reloadConfig();
+                loadConfigValues();
+                sender.sendMessage(ChatColor.GREEN + "[EventManager] Configuration reloaded successfully!");
+                return true;
+            }
+            
             if (!(sender instanceof Player)) {
                 sender.sendMessage("This command can only be run by a player.");
                 return true;
@@ -141,7 +155,7 @@ public class EventManager extends JavaPlugin implements Listener {
                 player.sendMessage("You do not have permission to use this command.");
                 return true;
             }
-          // Open GUI logic
+            // Open GUI logic
             EventManagerGUI.openWorldSelectionGUI(player);
             return true;
         }
@@ -315,54 +329,57 @@ public class EventManager extends JavaPlugin implements Listener {
                     return;
                 }
                 chatMutedGlobally = !chatMutedGlobally;
-                saveGlobalSettingsConfig(); // Save chat mute status
-                String status = chatMutedGlobally ? ChatColor.RED + "MUTED" : ChatColor.AQUA + "UNMUTED";
-                player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.GREEN + "Global chat has been " + status + ChatColor.GREEN + ".");
-                Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + player.getName() + " has " + status + ChatColor.YELLOW + " global chat.");
-                EventManagerGUI.openSettingsGUI(player, world); // Re-open to refresh GUI
-            }
-            // Handle Broadcast Message (Placeholder)
-            else if (clickedItem.getType() == Material.PAPER && clickedItem.hasItemMeta() && clickedItem.getItemMeta().getDisplayName().contains("Broadcast Message")) {
-                if (!player.hasPermission("eventmanager.broadcast")) {
-                    player.sendMessage(ChatColor.RED + "You don't have permission to broadcast messages.");
-                    return;
-                }
-                // This is a placeholder. Actual implementation would require input from the player.
-                player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + "Broadcast feature placeholder. Input mechanism needed.");
-                // For now, just close inventory or re-open
-                // player.closeInventory(); 
-                EventManagerGUI.openSettingsGUI(player, world); // Re-open to refresh GUI or keep it open
+                saveGlobalSettingsConfig();
+                Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.GREEN + "Global chat has been " + (chatMutedGlobally ? ChatColor.RED + "MUTED" : ChatColor.AQUA + "UNMUTED") + ChatColor.GREEN + ".");
+                EventManagerGUI.openSettingsGUI(player, world);
             }
             // Handle Admin Auto Vanish Toggle
             else if (clickedItem.getType() == Material.FEATHER && clickedItem.hasItemMeta() && clickedItem.getItemMeta().getDisplayName().contains("Toggle Admin Auto Vanish")) {
                 if (!player.hasPermission("eventmanager.toggle.adminautovanish")) {
-                    player.sendMessage(ChatColor.RED + "You don't have permission to toggle Admin Auto Vanish.");
+                    player.sendMessage(ChatColor.RED + "You don't have permission to toggle admin auto vanish.");
                     return;
                 }
                 adminAutoVanishEnabled = !adminAutoVanishEnabled;
-                saveGlobalSettingsConfig(); // Save admin auto vanish status
-                String vanishStatus = adminAutoVanishEnabled ? ChatColor.AQUA + "ENABLED" : ChatColor.RED + "DISABLED";
-                player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.GREEN + "Admin Auto Vanish on join has been " + vanishStatus + ChatColor.GREEN + ".");
-                Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + player.getName() + " has " + vanishStatus + ChatColor.YELLOW + " Admin Auto Vanish on join.");
-                EventManagerGUI.openSettingsGUI(player, world); // Re-open to refresh GUI
+                saveGlobalSettingsConfig();
+                Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.GREEN + "Admin auto vanish has been " + (adminAutoVanishEnabled ? ChatColor.AQUA + "ENABLED" : ChatColor.RED + "DISABLED") + ChatColor.GREEN + ".");
+                EventManagerGUI.openSettingsGUI(player, world);
             }
             // Handle Auto Restart Timer Toggle
             else if (clickedItem.getType() == Material.CLOCK && clickedItem.hasItemMeta() && clickedItem.getItemMeta().getDisplayName().contains("Toggle Auto Restart Timer")) {
                 if (!player.hasPermission("eventmanager.toggle.autorestart")) {
-                    player.sendMessage(ChatColor.RED + "You don't have permission to toggle the Auto Restart Timer.");
+                    player.sendMessage(ChatColor.RED + "You don't have permission to toggle auto restart timer.");
                     return;
                 }
                 if (autoRestartTimerEnabled) {
                     stopAutoRestartTimer();
-                    player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.RED + "Auto Restart Timer DISABLED.");
-                    Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + player.getName() + ChatColor.RED + " DISABLED" + ChatColor.YELLOW + " the Auto Restart Timer.");
+                    Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.RED + "Auto restart timer has been DISABLED.");
                 } else {
-                    startAutoRestartTimer(); // This already sets autoRestartTimerEnabled = true
-                    player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.AQUA + "Auto Restart Timer ENABLED. Server will restart in approx. " + autoRestartIntervalMinutes + " minutes.");
-                    Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + player.getName() + ChatColor.AQUA + " ENABLED" + ChatColor.YELLOW + " the Auto Restart Timer. Next restart in approx. " + autoRestartIntervalMinutes + " minutes.");
+                    startAutoRestartTimer();
+                    Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.AQUA + "Auto restart timer has been ENABLED. Next restart in " + autoRestartIntervalMinutes + " minutes.");
                 }
-                // autoRestartTimerEnabled is managed by start/stop methods, not directly saved here unless desired for persistence across reloads
-                EventManagerGUI.openSettingsGUI(player, world); // Re-open to refresh GUI
+                EventManagerGUI.openSettingsGUI(player, world);
+            }
+            // Handle Nether Access Toggle
+            else if (clickedItem.getType() == Material.NETHERRACK && clickedItem.hasItemMeta() && clickedItem.getItemMeta().getDisplayName().contains("Nether")) {
+                if (!player.hasPermission("eventmanager.toggle.netheraccess")) {
+                    player.sendMessage(ChatColor.RED + "You don't have permission to toggle Nether access.");
+                    return;
+                }
+                blockNether = !blockNether;
+                saveDimensionAccessConfig();
+                Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.GREEN + "Nether access has been " + (blockNether ? ChatColor.RED + "BLOCKED" : ChatColor.AQUA + "ENABLED") + ChatColor.GREEN + ".");
+                EventManagerGUI.openSettingsGUI(player, world);
+            }
+            // Handle End Access Toggle
+            else if (clickedItem.getType() == Material.END_STONE && clickedItem.hasItemMeta() && clickedItem.getItemMeta().getDisplayName().contains("End")) {
+                if (!player.hasPermission("eventmanager.toggle.endaccess")) {
+                    player.sendMessage(ChatColor.RED + "You don't have permission to toggle End access.");
+                    return;
+                }
+                blockEnd = !blockEnd;
+                saveDimensionAccessConfig();
+                Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.GREEN + "End access has been " + (blockEnd ? ChatColor.RED + "BLOCKED" : ChatColor.AQUA + "ENABLED") + ChatColor.GREEN + ".");
+                EventManagerGUI.openSettingsGUI(player, world);
             }
             // Add more else if blocks here for other items
         }

@@ -1,14 +1,26 @@
 # EventManager Configuration
+# All settings can be modified in-game using /em command
 
-# Access to dimensions
+# World Settings
+# These settings can be configured per-world in-game
+pvp-enabled: true
+mob-spawning: true
+keep-inventory: false
+
+# Dimension Access Control
+# Controls whether players can access these dimensions
 block-nether: false
 block-end: false
 
-# Global chat mute status
+# Chat Settings
+# Global chat control
 chat-muted-globally: false
 
-# Admin auto-vanish on join
+# Admin Settings
+# Controls admin visibility on join
 admin-auto-vanish: false
 
-# Auto-restart timer interval in minutes
+# Auto-Restart Configuration
+# Server will automatically restart after the specified interval
+auto-restart-timer-enabled: false
 auto-restart-interval-minutes: 180
