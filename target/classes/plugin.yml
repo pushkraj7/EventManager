@@ -14,3 +14,12 @@ permissions:
   eventmanager.gui:
     description: Allows opening the EventManager GUI.
     default: op
+  eventmanager.toggle.chatmute:
+    description: Allows toggling the global chat mute.
+    default: op
+  eventmanager.broadcast:
+    description: Allows broadcasting messages via the EventManager GUI.
+    default: op
+  eventmanager.chat.bypass:
+    description: Allows a player to chat even when global chat is muted.
+    default: op
