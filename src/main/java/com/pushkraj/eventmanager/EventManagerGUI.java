@@ -121,7 +121,7 @@ public class EventManagerGUI {
             "§eToggle Nether Dimension Access", 
             "§c§oConceptual - Server Setting",
             "§7Typically requires 'allow-nether' in server.properties",
-            "§7and a server restart.
+            "§7and a server restart."
         );
 
         // New items for added features
@@ -137,6 +137,23 @@ public class EventManagerGUI {
             "§7Click to send a server-wide message.",
             "§c§o(Placeholder - Requires input)"
         );
+
+        ItemStack adminAutoVanishToggle = createGuiItem(Material.FEATHER, // Or Material.ENDER_PEARL
+            "§dToggle Admin Auto Vanish",
+            "§7Current: " + (com.pushkraj.eventmanager.EventManager.isAdminAutoVanishEnabled() ? "§aEnabled" : "§cDisabled"), // Requires access to a static boolean in EventManager
+            "",
+            "§7Click to " + (com.pushkraj.eventmanager.EventManager.isAdminAutoVanishEnabled() ? "§cdisable" : "§aenable") + " auto vanish for admins on join."
+        );
+
+        // New item for Auto Restart Timer
+        ItemStack autoRestartToggle = createGuiItem(Material.CLOCK,
+            "§6Toggle Auto Restart Timer",
+            "§7Current: " + (com.pushkraj.eventmanager.EventManager.isAutoRestartTimerEnabled() ? "§aEnabled" : "§cDisabled"), // Requires access to EventManager
+            "§7Interval: " + com.pushkraj.eventmanager.EventManager.getAutoRestartIntervalMinutes() + " minutes (approx)", // Requires access to EventManager
+            "",
+            "§7Click to " + (com.pushkraj.eventmanager.EventManager.isAutoRestartTimerEnabled() ? "§cdisable" : "§aenable") + " the auto restart timer.",
+            "§c§oNote: Restart command runs as console."
+        );
         
         ItemStack backButton = createGuiItem(Material.ARROW, "§c« Back to World Selection", "§7Return to the world list.");
 
@@ -148,6 +165,8 @@ public class EventManagerGUI {
 
         gui.setItem(22, chatMuteToggle); // New item slot
         gui.setItem(24, broadcastMessageItem); // New item slot
+        gui.setItem(26, adminAutoVanishToggle); // New item slot for admin auto vanish
+        gui.setItem(28, autoRestartToggle); // New item slot for auto restart timer
 
         gui.setItem(20, difficultySelector);
         // Separator line idea

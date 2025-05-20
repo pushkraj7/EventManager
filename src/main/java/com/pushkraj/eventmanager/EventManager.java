@@ -9,18 +9,65 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.Material;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameRule;
 import org.bukkit.World;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.EventPriority;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 public class EventManager extends JavaPlugin implements Listener {
     private static boolean chatMutedGlobally = false;
+    private static boolean adminAutoVanishEnabled = false;
+    private static boolean autoRestartTimerEnabled = false;
+    private static int autoRestartTaskId = -1;
+    private static long autoRestartIntervalMinutes = 180; // Default 3 hours, configurable later if needed
 
     public static boolean isChatMutedGlobally() {
         return chatMutedGlobally;
+    }
+
+    public static boolean isAdminAutoVanishEnabled() {
+        return adminAutoVanishEnabled;
+    }
+
+    public static boolean isAutoRestartTimerEnabled() {
+        return autoRestartTimerEnabled;
+    }
+
+    public static long getAutoRestartIntervalMinutes() {
+        return autoRestartIntervalMinutes;
+    }
+
+    // Method to start the restart timer
+    private void startAutoRestartTimer() {
+        if (autoRestartTaskId != -1) {
+            Bukkit.getScheduler().cancelTask(autoRestartTaskId);
+        }
+        long ticks = autoRestartIntervalMinutes * 60 * 20; // minutes to ticks
+        autoRestartTaskId = Bukkit.getScheduler().runTaskLater(this, () -> {
+            Bukkit.broadcastMessage(ChatColor.RED + "[EventManager] Server is restarting in 1 minute!");
+            // Schedule actual restart command after a short delay (e.g., 1 minute)
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), "restart"); // Or "stop" if preferred
+            }, 20L * 60); // 1 minute in ticks
+        }, ticks).getTaskId();
+        autoRestartTimerEnabled = true;
+        getLogger().info("Auto restart timer enabled. Restart in " + autoRestartIntervalMinutes + " minutes.");
+    }
+
+    // Method to stop the restart timer
+    private void stopAutoRestartTimer() {
+        if (autoRestartTaskId != -1) {
+            Bukkit.getScheduler().cancelTask(autoRestartTaskId);
+            autoRestartTaskId = -1;
+        }
+        autoRestartTimerEnabled = false;
+        getLogger().info("Auto restart timer disabled.");
     }
     @Override
     public void onEnable() {
@@ -30,6 +77,7 @@ public class EventManager extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        stopAutoRestartTimer(); // Ensure timer is stopped on plugin disable
         getLogger().info("EventManager has been disabled!");
     }
 
@@ -238,11 +286,40 @@ public class EventManager extends JavaPlugin implements Listener {
                 // player.closeInventory(); 
                 EventManagerGUI.openSettingsGUI(player, world); // Re-open to refresh GUI or keep it open
             }
+            // Handle Admin Auto Vanish Toggle
+            else if (clickedItem.getType() == Material.FEATHER && clickedItem.hasItemMeta() && clickedItem.getItemMeta().getDisplayName().contains("Toggle Admin Auto Vanish")) {
+                if (!player.hasPermission("eventmanager.toggle.adminautovanish")) {
+                    player.sendMessage(ChatColor.RED + "You don't have permission to toggle Admin Auto Vanish.");
+                    return;
+                }
+                adminAutoVanishEnabled = !adminAutoVanishEnabled;
+                String vanishStatus = adminAutoVanishEnabled ? ChatColor.AQUA + "ENABLED" : ChatColor.RED + "DISABLED";
+                player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.GREEN + "Admin Auto Vanish on join has been " + vanishStatus + ChatColor.GREEN + ".");
+                Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + player.getName() + " has " + vanishStatus + ChatColor.YELLOW + " Admin Auto Vanish on join.");
+                EventManagerGUI.openSettingsGUI(player, world); // Re-open to refresh GUI
+            }
+            // Handle Auto Restart Timer Toggle
+            else if (clickedItem.getType() == Material.CLOCK && clickedItem.hasItemMeta() && clickedItem.getItemMeta().getDisplayName().contains("Toggle Auto Restart Timer")) {
+                if (!player.hasPermission("eventmanager.toggle.autorestart")) {
+                    player.sendMessage(ChatColor.RED + "You don't have permission to toggle the Auto Restart Timer.");
+                    return;
+                }
+                if (autoRestartTimerEnabled) {
+                    stopAutoRestartTimer();
+                    player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.RED + "Auto Restart Timer DISABLED.");
+                    Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + player.getName() + ChatColor.RED + " DISABLED" + ChatColor.YELLOW + " the Auto Restart Timer.");
+                } else {
+                    startAutoRestartTimer();
+                    player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.AQUA + "Auto Restart Timer ENABLED. Server will restart in approx. " + autoRestartIntervalMinutes + " minutes.");
+                    Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + player.getName() + ChatColor.AQUA + " ENABLED" + ChatColor.YELLOW + " the Auto Restart Timer. Next restart in approx. " + autoRestartIntervalMinutes + " minutes.");
+                }
+                EventManagerGUI.openSettingsGUI(player, world); // Re-open to refresh GUI
+            }
             // Add more else if blocks here for other items
         }
     }
 
-    @org.bukkit.event.EventHandler(priority = EventPriority.LOWEST) // Process before other chat plugins if possible
+    @org.bukkit.event.EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         if (chatMutedGlobally) {
             Player player = event.getPlayer();
@@ -251,6 +328,18 @@ public class EventManager extends JavaPlugin implements Listener {
                 event.setCancelled(true);
                 player.sendMessage(ChatColor.RED + "Chat is currently muted by an administrator.");
             }
+        }
+    }
+
+    @org.bukkit.event.EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        if (adminAutoVanishEnabled && player.hasPermission("eventmanager.admin.autovanish")) {
+            // Apply invisibility - basic potion effect. For true vanish, a dedicated vanish plugin API is better.
+            player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 1, false, false));
+            player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.GRAY + "You have joined silently (vanished).");
+            // Optionally, hide join message if not already handled by another plugin
+            // event.setJoinMessage(null); // This might be too intrusive or conflict
         }
     }
 }
