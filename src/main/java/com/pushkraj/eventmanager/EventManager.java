@@ -130,7 +130,8 @@ public class EventManager extends JavaPlugin implements Listener {
             if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
 
             String title = view.getTitle();
-            String worldNameFromTitle = title.substring(EventManagerGUI.SETTINGS_GUI_TITLE_PREFIX.length());
+            String worldNameFromTitleRaw = title.substring(EventManagerGUI.SETTINGS_GUI_TITLE_PREFIX.length());
+            String worldNameFromTitle = ChatColor.stripColor(worldNameFromTitleRaw); // Strip color codes
             World world = org.bukkit.Bukkit.getWorld(worldNameFromTitle);
 
             if (world == null) {
