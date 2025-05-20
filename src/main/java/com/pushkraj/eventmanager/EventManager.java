@@ -19,6 +19,9 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.EventPriority;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.event.player.PlayerPortalEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 
 public class EventManager extends JavaPlugin implements Listener {
     private static boolean chatMutedGlobally = false;
@@ -26,6 +29,8 @@ public class EventManager extends JavaPlugin implements Listener {
     private static boolean autoRestartTimerEnabled = false;
     private static int autoRestartTaskId = -1;
     private static long autoRestartIntervalMinutes = 180; // Default 3 hours, configurable later if needed
+    private static boolean blockNether = false; // Default: Nether accessible, loaded from config
+    private static boolean blockEnd = false;   // Default: End accessible, loaded from config
 
     public static boolean isChatMutedGlobally() {
         return chatMutedGlobally;
@@ -41,6 +46,14 @@ public class EventManager extends JavaPlugin implements Listener {
 
     public static long getAutoRestartIntervalMinutes() {
         return autoRestartIntervalMinutes;
+    }
+
+    public static boolean isNetherBlocked() {
+        return blockNether;
+    }
+
+    public static boolean isEndBlocked() {
+        return blockEnd;
     }
 
     // Method to start the restart timer
@@ -73,6 +86,41 @@ public class EventManager extends JavaPlugin implements Listener {
     public void onEnable() {
         getLogger().info("EventManager has been enabled!");
         getServer().getPluginManager().registerEvents(this, this);
+        // Load configuration
+        saveDefaultConfig(); // Creates config.yml if it doesn't exist with defaults from plugin.yml (if any, or just empty)
+        loadConfigValues();
+    }
+
+    private void loadConfigValues() {
+        getConfig().addDefault("block-nether", false);
+        getConfig().addDefault("block-end", false);
+        // No need to copy defaults if we are just reading and they might not exist yet.
+        // getFileConfiguration().options().copyDefaults(true);
+        // saveConfig(); // This would write defaults if not present, good for initial setup.
+
+        blockNether = getConfig().getBoolean("block-nether", false);
+        blockEnd = getConfig().getBoolean("block-end", false);
+        chatMutedGlobally = getConfig().getBoolean("chat-muted-globally", false); // Assuming you might want to save this too
+        adminAutoVanishEnabled = getConfig().getBoolean("admin-auto-vanish", false); // And this
+        autoRestartIntervalMinutes = getConfig().getLong("auto-restart-interval-minutes", 180);
+        // autoRestartTimerEnabled is a runtime state, not typically saved directly unless you want to persist its state across restarts
+
+        getLogger().info("Loaded configuration: blockNether=" + blockNether + ", blockEnd=" + blockEnd);
+    }
+
+    private void saveDimensionAccessConfig() {
+        getConfig().set("block-nether", blockNether);
+        getConfig().set("block-end", blockEnd);
+        saveConfig();
+        getLogger().info("Saved dimension access configuration: blockNether=" + blockNether + ", blockEnd=" + blockEnd);
+    }
+
+    // Example for saving other global settings if you decide to persist them
+    private void saveGlobalSettingsConfig() {
+        getConfig().set("chat-muted-globally", chatMutedGlobally);
+        getConfig().set("admin-auto-vanish", adminAutoVanishEnabled);
+        getConfig().set("auto-restart-interval-minutes", autoRestartIntervalMinutes);
+        saveConfig();
     }
 
     @Override
@@ -233,35 +281,32 @@ public class EventManager extends JavaPlugin implements Listener {
                 EventManagerGUI.openSettingsGUI(player, world); // Re-open to refresh conceptual state if needed
             }
             // Handle End Dimension Toggle
-            else if (clickedItem.getType() == Material.END_STONE && clickedItem.hasItemMeta() && clickedItem.getItemMeta().getDisplayName().contains("Toggle End Dimension")) {
-                if (!player.hasPermission("eventmanager.toggle.end")) {
-                    player.sendMessage(ChatColor.RED + "You don't have permission to toggle The End dimension.");
+            else if (clickedItem.getType() == Material.END_STONE && clickedItem.hasItemMeta() && clickedItem.getItemMeta().getDisplayName().contains("The End:")) { // Display name check updated
+                if (!player.hasPermission("eventmanager.toggle.endaccess")) {
+                    player.sendMessage(ChatColor.RED + "You don't have permission to toggle The End dimension access.");
                     return;
                 }
-                // NOTE: Toggling dimensions typically requires server configuration (server.properties 'allow-end')
-                // and often a server restart. Doing this dynamically via plugin is non-trivial and may not be fully supported.
-                // This is a placeholder action.
-                boolean isEndEnabled = true; // Placeholder: Assume enabled or check server.properties if possible (read-only)
-                player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + "Toggling The End dimension access is a server-level configuration ('allow-end' in server.properties) and typically requires a restart.");
-                // player.sendMessage(ChatColor.GREEN + "The End dimension is currently " + (isEndEnabled ? "conceptually enabled." : "conceptually disabled."));
-                // meta.setDisplayName(ChatColor.RESET + "Toggle End Dimension (" + (isEndEnabled ? ChatColor.GREEN + "Enabled" : ChatColor.RED + "Disabled") + ChatColor.RESET + ")");
-                // clickedItem.setItemMeta(meta);
-                EventManagerGUI.openSettingsGUI(player, world);
+                blockEnd = !blockEnd; // Toggle the state
+                saveDimensionAccessConfig(); // Save to config
+                String endStatus = blockEnd ? ChatColor.RED + "BLOCKED" : ChatColor.AQUA + "ENABLED";
+                String message = ChatColor.GOLD + "[EventManager] " + ChatColor.GREEN + "Player access to The End dimension has been " + endStatus + ChatColor.GREEN + ".";
+                player.sendMessage(message);
+                Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + player.getName() + " has set player access to The End dimension to " + endStatus + ChatColor.YELLOW + ".");
+                EventManagerGUI.openSettingsGUI(player, world); // Refresh GUI
             }
             // Handle Nether Dimension Toggle
-            else if (clickedItem.getType() == Material.NETHERRACK && clickedItem.hasItemMeta() && clickedItem.getItemMeta().getDisplayName().contains("Toggle Nether Dimension")) {
-                if (!player.hasPermission("eventmanager.toggle.nether")) {
-                    player.sendMessage(ChatColor.RED + "You don't have permission to toggle The Nether dimension.");
+            else if (clickedItem.getType() == Material.NETHERRACK && clickedItem.hasItemMeta() && clickedItem.getItemMeta().getDisplayName().contains("Nether:")) { // Display name check updated
+                if (!player.hasPermission("eventmanager.toggle.netheraccess")) {
+                    player.sendMessage(ChatColor.RED + "You don't have permission to toggle The Nether dimension access.");
                     return;
                 }
-                // NOTE: Toggling dimensions typically requires server configuration (server.properties 'allow-nether')
-                // and often a server restart.
-                boolean isNetherEnabled = true; // Placeholder: Assume enabled or check server.properties if possible (read-only)
-                player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + "Toggling The Nether dimension access is a server-level configuration ('allow-nether' in server.properties) and typically requires a restart.");
-                // player.sendMessage(ChatColor.GREEN + "The Nether dimension is currently " + (isNetherEnabled ? "conceptually enabled." : "conceptually disabled."));
-                // meta.setDisplayName(ChatColor.RESET + "Toggle Nether Dimension (" + (isNetherEnabled ? ChatColor.GREEN + "Enabled" : ChatColor.RED + "Disabled") + ChatColor.RESET + ")");
-                // clickedItem.setItemMeta(meta);
-                EventManagerGUI.openSettingsGUI(player, world);
+                blockNether = !blockNether; // Toggle the state
+                saveDimensionAccessConfig(); // Save to config
+                String netherStatus = blockNether ? ChatColor.RED + "BLOCKED" : ChatColor.AQUA + "ENABLED";
+                String message = ChatColor.GOLD + "[EventManager] " + ChatColor.GREEN + "Player access to The Nether dimension has been " + netherStatus + ChatColor.GREEN + ".";
+                player.sendMessage(message);
+                Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + player.getName() + " has set player access to The Nether dimension to " + netherStatus + ChatColor.YELLOW + ".");
+                EventManagerGUI.openSettingsGUI(player, world); // Refresh GUI
             }
             // Handle Chat Mute Toggle
             else if (clickedItem.getType() == Material.WRITABLE_BOOK && clickedItem.hasItemMeta() && clickedItem.getItemMeta().getDisplayName().contains("Toggle Chat Mute")) {
@@ -270,6 +315,7 @@ public class EventManager extends JavaPlugin implements Listener {
                     return;
                 }
                 chatMutedGlobally = !chatMutedGlobally;
+                saveGlobalSettingsConfig(); // Save chat mute status
                 String status = chatMutedGlobally ? ChatColor.RED + "MUTED" : ChatColor.AQUA + "UNMUTED";
                 player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.GREEN + "Global chat has been " + status + ChatColor.GREEN + ".");
                 Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + player.getName() + " has " + status + ChatColor.YELLOW + " global chat.");
@@ -294,6 +340,7 @@ public class EventManager extends JavaPlugin implements Listener {
                     return;
                 }
                 adminAutoVanishEnabled = !adminAutoVanishEnabled;
+                saveGlobalSettingsConfig(); // Save admin auto vanish status
                 String vanishStatus = adminAutoVanishEnabled ? ChatColor.AQUA + "ENABLED" : ChatColor.RED + "DISABLED";
                 player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.GREEN + "Admin Auto Vanish on join has been " + vanishStatus + ChatColor.GREEN + ".");
                 Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + player.getName() + " has " + vanishStatus + ChatColor.YELLOW + " Admin Auto Vanish on join.");
@@ -310,15 +357,71 @@ public class EventManager extends JavaPlugin implements Listener {
                     player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.RED + "Auto Restart Timer DISABLED.");
                     Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + player.getName() + ChatColor.RED + " DISABLED" + ChatColor.YELLOW + " the Auto Restart Timer.");
                 } else {
-                    startAutoRestartTimer();
+                    startAutoRestartTimer(); // This already sets autoRestartTimerEnabled = true
                     player.sendMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.AQUA + "Auto Restart Timer ENABLED. Server will restart in approx. " + autoRestartIntervalMinutes + " minutes.");
                     Bukkit.broadcastMessage(ChatColor.GOLD + "[EventManager] " + ChatColor.YELLOW + player.getName() + ChatColor.AQUA + " ENABLED" + ChatColor.YELLOW + " the Auto Restart Timer. Next restart in approx. " + autoRestartIntervalMinutes + " minutes.");
                 }
+                // autoRestartTimerEnabled is managed by start/stop methods, not directly saved here unless desired for persistence across reloads
                 EventManagerGUI.openSettingsGUI(player, world); // Re-open to refresh GUI
             }
             // Add more else if blocks here for other items
         }
     }
+
+    @org.bukkit.event.EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerPortal(PlayerPortalEvent event) {
+        Player player = event.getPlayer();
+        // Allow ops or players with specific permission to bypass
+        if (player.isOp() || player.hasPermission("eventmanager.bypass.dimensionblock")) {
+            return;
+        }
+
+        // Check destination world and environment
+        if (event.getTo() == null || event.getTo().getWorld() == null) {
+            return; // Should not happen with portals, but good practice
+        }
+        World.Environment toEnvironment = event.getTo().getWorld().getEnvironment();
+
+        if (toEnvironment == World.Environment.NETHER && blockNether) {
+            event.setCancelled(true);
+            player.sendMessage(ChatColor.RED + "⚠ Nether is currently disabled by server admin.");
+        } else if (toEnvironment == World.Environment.THE_END && blockEnd) {
+            event.setCancelled(true);
+            player.sendMessage(ChatColor.RED + "⚠ The End is currently disabled by server admin.");
+        }
+    }
+
+    @org.bukkit.event.EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerTeleport(PlayerTeleportEvent event) {
+        Player player = event.getPlayer();
+        // Allow ops or players with specific permission to bypass
+        if (player.isOp() || player.hasPermission("eventmanager.bypass.dimensionblock")) {
+            return;
+        }
+
+        // Check destination world and environment
+        if (event.getTo() == null || event.getTo().getWorld() == null) {
+            return; // Destination might be null if teleport is invalid
+        }
+        World.Environment toEnvironment = event.getTo().getWorld().getEnvironment();
+        TeleportCause cause = event.getCause();
+
+        boolean isPortalTeleport = (cause == TeleportCause.NETHER_PORTAL || cause == TeleportCause.END_PORTAL);
+
+        if (toEnvironment == World.Environment.NETHER && blockNether) {
+            event.setCancelled(true);
+            if (!isPortalTeleport) { // Only send message if not a portal (portal event handles its own message)
+                player.sendMessage(ChatColor.RED + "⚠ Nether is currently disabled by server admin.");
+            }
+        } else if (toEnvironment == World.Environment.THE_END && blockEnd) {
+            event.setCancelled(true);
+            if (!isPortalTeleport) { // Only send message if not a portal
+                player.sendMessage(ChatColor.RED + "⚠ The End is currently disabled by server admin.");
+            }
+        }
+    }
+
+    // Existing event handlers like AsyncPlayerChatEvent, PlayerJoinEvent might be in the truncated part or follow here.
 
     @org.bukkit.event.EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerChat(AsyncPlayerChatEvent event) {

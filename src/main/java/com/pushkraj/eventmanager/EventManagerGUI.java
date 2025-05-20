@@ -109,19 +109,23 @@ public class EventManagerGUI {
             "§7for " + worldDisplayName + "§7."
         );
 
-        // Conceptual toggles for dimensions remain
-        ItemStack endToggle = createGuiItem(Material.END_STONE_BRICKS, // Changed for visual variety
-            "§eToggle End Dimension Access", 
-            "§c§oConceptual - Server Setting",
-            "§7Typically requires 'allow-end' in server.properties",
-            "§7and a server restart."
+        // Functional toggles for dimension access
+        boolean isEndBlocked = com.pushkraj.eventmanager.EventManager.isEndBlocked();
+        ItemStack endToggle = createGuiItem(Material.END_STONE, // Material changed to match EventManager logic
+            isEndBlocked ? "§c§lThe End: §4BLOCKED" : "§5§lThe End: §aENABLED",
+            "§7Player access to The End dimension.",
+            "§7Current: " + (isEndBlocked ? "§cBlocked" : "§aEnabled"),
+            "",
+            "§7Click to " + (isEndBlocked ? "§aenable" : "§cblock") + " player access."
         );
 
-        ItemStack netherToggle = createGuiItem(Material.NETHER_BRICKS, // Changed for visual variety
-            "§eToggle Nether Dimension Access", 
-            "§c§oConceptual - Server Setting",
-            "§7Typically requires 'allow-nether' in server.properties",
-            "§7and a server restart."
+        boolean isNetherBlocked = com.pushkraj.eventmanager.EventManager.isNetherBlocked();
+        ItemStack netherToggle = createGuiItem(Material.NETHERRACK, // Material changed to match EventManager logic
+            isNetherBlocked ? "§c§lNether: §4BLOCKED" : "§c§lNether: §aENABLED", // Using §c for Nether as per world selection
+            "§7Player access to The Nether dimension.",
+            "§7Current: " + (isNetherBlocked ? "§cBlocked" : "§aEnabled"),
+            "",
+            "§7Click to " + (isNetherBlocked ? "§aenable" : "§cblock") + " player access."
         );
 
         // New items for added features
@@ -171,11 +175,17 @@ public class EventManagerGUI {
         gui.setItem(20, difficultySelector);
         // Separator line idea
         ItemStack separator = createGuiItem(Material.GRAY_STAINED_GLASS_PANE, " ");
-        for(int i = 27; i < 36; i++) { // Row for conceptual/server settings
-            if (i == 29) gui.setItem(i, endToggle); // Adjusted slot
-            else if (i == 31) gui.setItem(i, netherToggle); // Adjusted slot
-            // else gui.setItem(i, separator); // Optional: fill with separators
-        }
+        // Place Nether and End toggles
+        // Using slots 30 (Nether) and 32 (End) from previous attempt, ensure they are distinct.
+        gui.setItem(30, netherToggle); 
+        gui.setItem(32, endToggle);   
+
+        // Fill the rest of the row with separators if desired, or leave empty
+        // for(int i = 27; i < 36; i++) {
+        //     if (gui.getItem(i) == null && i != 30 && i != 32) { // Avoid overwriting our toggles
+        //         gui.setItem(i, separator);
+        //     }
+        // }
         
         gui.setItem(49, backButton); // Center bottom row for back button
 

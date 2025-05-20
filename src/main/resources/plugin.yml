@@ -32,3 +32,12 @@ permissions:
   eventmanager.toggle.autorestart:
     description: Allows toggling the auto restart timer.
     default: op
+  eventmanager.toggle.netheraccess:
+    description: Allows toggling player access to The Nether dimension.
+    default: op
+  eventmanager.toggle.endaccess:
+    description: Allows toggling player access to The End dimension.
+    default: op
+  eventmanager.bypass.dimensionblock:
+    description: Allows players to bypass Nether/End dimension blocks.
+    default: op
