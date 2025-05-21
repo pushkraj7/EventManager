@@ -1,19 +1,18 @@
 package com.pushkraj.eventmanager;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.World;
-import org.bukkit.ChatColor;
-import org.bukkit.Difficulty;
-import java.util.List;
 
 import com.onarandombox.multiversecore.MultiverseCore;
 import com.onarandombox.multiversecore.api.MVWorld;
-import com.onarandombox.multiversecore.api.MVWorldManager;
+
+import java.util.List;
 
 public class EventManagerGUI {
 

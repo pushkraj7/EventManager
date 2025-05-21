@@ -19,7 +19,7 @@
       <id>OnARandomBox</id>
       <url>https://repo.onarandombox.com/content/groups/public/</url>
     </repository>
- </repositories>
+  </repositories>
   <dependencies>
     <dependency>
       <groupId>io.papermc.paper</groupId>
@@ -30,7 +30,7 @@
     <dependency>
       <groupId>com.onarandombox.multiversecore</groupId>
       <artifactId>Multiverse-Core</artifactId>
-      <version>4.3.12</version>
+      <version>4.3.16</version>
       <scope>provided</scope>
     </dependency>
 

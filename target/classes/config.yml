@@ -1,0 +1,35 @@
+# EventManager Configuration
+# All settings can be modified in-game using /em command
+
+# World Settings
+# These settings can be configured per-world in-game
+pvp-enabled: true
+mob-spawning: true
+keep-inventory: false
+
+# Dimension Access Control
+# Controls whether players can access these dimensions
+block-nether: false
+block-end: false
+
+# Chat Settings
+# Global chat control
+chat-muted-globally: false
+
+# Admin Settings
+# Controls admin visibility on join
+admin-auto-vanish: false
+
+# Auto-Restart Configuration
+# Server will automatically restart after the specified interval
+auto-restart-timer-enabled: false
+auto-restart-interval-minutes: 180
+
+# World-Specific Settings
+# These settings are managed per-world through the GUI
+world-settings:
+  # Example format (will be populated by GUI):
+  # world_name:
+  #   pvp: true
+  #   keep-inventory: false
+  #   difficulty: NORMAL
