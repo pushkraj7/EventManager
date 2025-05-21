@@ -4,6 +4,7 @@ version: 1.0
 api-version: '1.21'
 author: Pushkraj
 description: A PaperMC plugin for Minecraft.
+softdepend: [Multiverse-Core]
 commands:
   eventmanager:
     description: Opens the EventManager GUI.
@@ -40,4 +41,7 @@ permissions:
     default: op
   eventmanager.bypass.dimensionblock:
     description: Allows players to bypass Nether/End dimension blocks.
+  eventmanager.gui.multiverse:
+    description: Allows access to Multiverse world settings via EventManager.
+    default: op
     default: op

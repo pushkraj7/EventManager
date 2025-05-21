@@ -22,6 +22,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
+import org.bukkit.Difficulty;
 
 public class EventManager extends JavaPlugin implements Listener {
     private static boolean chatMutedGlobally = false;
@@ -31,6 +32,15 @@ public class EventManager extends JavaPlugin implements Listener {
     private static long autoRestartIntervalMinutes = 180; // Default 3 hours, configurable later if needed
     private static boolean blockNether = false; // Default: Nether accessible, loaded from config
     private static boolean blockEnd = false;   // Default: End accessible, loaded from config
+    private static com.onarandombox.multiversecore.MultiverseCore multiverseCore = null;
+
+    public static boolean isMultiverseEnabled() {
+        return multiverseCore != null;
+    }
+
+    public static com.onarandombox.multiversecore.MultiverseCore getMultiverseCore() {
+        return multiverseCore;
+    }
 
     public static boolean isChatMutedGlobally() {
         return chatMutedGlobally;
@@ -87,9 +97,21 @@ public class EventManager extends JavaPlugin implements Listener {
     public void onEnable() {
         getLogger().info("EventManager has been enabled!");
         getServer().getPluginManager().registerEvents(this, this);
+
+        // Initialize Multiverse-Core integration
+        if (getServer().getPluginManager().getPlugin("Multiverse-Core") != null) {
+            multiverseCore = (com.onarandombox.multiversecore.MultiverseCore) getServer().getPluginManager().getPlugin("Multiverse-Core");
+            getLogger().info("Multiverse-Core integration enabled!");
+        } else {
+            getLogger().info("Multiverse-Core not found. World management features will be limited.");
+        }
+
         // Load configuration
         saveDefaultConfig(); // Creates config.yml if it doesn't exist with defaults from plugin.yml (if any, or just empty)
         loadConfigValues();
+        
+        // Load world-specific settings
+        loadWorldSettings();
     }
 
     private void loadConfigValues() {
@@ -124,6 +146,46 @@ public class EventManager extends JavaPlugin implements Listener {
     private void saveAutoRestartConfig() {
         getConfig().set("auto-restart-interval-minutes", autoRestartIntervalMinutes);
         getConfig().set("auto-restart-timer-enabled", autoRestartTimerEnabled);
+        saveConfig();
+    }
+
+    private void loadWorldSettings() {
+        if (!getConfig().contains("world-settings")) {
+            getConfig().createSection("world-settings");
+            saveConfig();
+        }
+
+        // Load settings for each world
+        for (World world : Bukkit.getWorlds()) {
+            String worldName = world.getName();
+            String path = "world-settings." + worldName;
+
+            // Create section for world if it doesn't exist
+            if (!getConfig().contains(path)) {
+                getConfig().createSection(path);
+                // Set default values
+                getConfig().set(path + ".pvp", world.getPVP());
+                getConfig().set(path + ".keep-inventory", world.getGameRuleValue(GameRule.KEEP_INVENTORY));
+                getConfig().set(path + ".difficulty", world.getDifficulty().toString());
+                saveConfig();
+            }
+
+            // Apply saved settings
+            world.setPVP(getConfig().getBoolean(path + ".pvp"));
+            world.setGameRule(GameRule.KEEP_INVENTORY, getConfig().getBoolean(path + ".keep-inventory"));
+            try {
+                world.setDifficulty(Difficulty.valueOf(getConfig().getString(path + ".difficulty")));
+            } catch (IllegalArgumentException e) {
+                getLogger().warning("Invalid difficulty value for world " + worldName);
+            }
+        }
+    }
+
+    public void saveWorldSettings(World world) {
+        String path = "world-settings." + world.getName();
+        getConfig().set(path + ".pvp", world.getPVP());
+        getConfig().set(path + ".keep-inventory", world.getGameRuleValue(GameRule.KEEP_INVENTORY));
+        getConfig().set(path + ".difficulty", world.getDifficulty().toString());
         saveConfig();
     }
     @Override

@@ -24,3 +24,12 @@ admin-auto-vanish: false
 # Server will automatically restart after the specified interval
 auto-restart-timer-enabled: false
 auto-restart-interval-minutes: 180
+
+# World-Specific Settings
+# These settings are managed per-world through the GUI
+world-settings:
+  # Example format (will be populated by GUI):
+  # world_name:
+  #   pvp: true
+  #   keep-inventory: false
+  #   difficulty: NORMAL

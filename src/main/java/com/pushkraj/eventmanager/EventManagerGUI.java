@@ -6,15 +6,73 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-
 import org.bukkit.World;
-import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Difficulty;
 import java.util.List;
+
+import com.onarandombox.multiversecore.MultiverseCore;
+import com.onarandombox.multiversecore.api.MVWorld;
+import com.onarandombox.multiversecore.api.MVWorldManager;
 
 public class EventManagerGUI {
 
     public static final String WORLD_SELECTION_GUI_TITLE = "§8§lSelect World to Manage";
     public static final String SETTINGS_GUI_TITLE_PREFIX = "§6§lEvent Manager §8» §7";
+    public static final String MULTIVERSE_WORLDS_GUI_TITLE = "§8§lMultiverse Worlds";
+
+    public static void openMultiverseWorldsGUI(Player player) {
+        if (!player.hasPermission("eventmanager.gui.multiverse")) {
+            player.sendMessage(ChatColor.RED + "You don't have permission to access Multiverse world settings.");
+            return;
+        }
+
+        com.onarandombox.multiversecore.MultiverseCore mvCore = com.pushkraj.eventmanager.EventManager.getMultiverseCore();
+        if (mvCore == null) {
+            player.sendMessage(ChatColor.RED + "Multiverse-Core is not installed or enabled.");
+            return;
+        }
+
+        java.util.List<com.onarandombox.multiversecore.api.MVWorld> mvWorlds = mvCore.getMVWorldManager().getMVWorlds();
+        int size = Math.min(54, ((mvWorlds.size() + 8) / 9) * 9); // Round up to nearest multiple of 9, max 54
+
+        Inventory gui = Bukkit.createInventory(null, size, MULTIVERSE_WORLDS_GUI_TITLE);
+
+        for (int i = 0; i < mvWorlds.size(); i++) {
+            com.onarandombox.multiversecore.api.MVWorld mvWorld = mvWorlds.get(i);
+            World world = mvWorld.getCBWorld();
+            if (world != null) {
+                Material icon = world.getEnvironment() == World.Environment.NORMAL ? Material.GRASS_BLOCK
+                             : world.getEnvironment() == World.Environment.NETHER ? Material.NETHERRACK
+                             : world.getEnvironment() == World.Environment.THE_END ? Material.END_STONE
+                             : Material.STONE;
+
+                ItemStack worldItem = createGuiItem(icon,
+                    "§b" + world.getName(),
+                    "§7Environment: §e" + world.getEnvironment().name(),
+                    "§7PvP: " + (world.getPVP() ? "§aEnabled" : "§cDisabled"),
+                    "§7Difficulty: §e" + world.getDifficulty().name(),
+                    "",
+                    "§7Click to manage world settings");
+
+                gui.setItem(i, worldItem);
+            }
+        }
+
+        // Add back button
+        ItemStack backButton = createGuiItem(Material.ARROW, "§c« Back", "§7Return to main menu");
+        gui.setItem(size - 1, backButton);
+
+        // Fill empty slots with glass panes
+        ItemStack filler = createGuiItem(Material.BLACK_STAINED_GLASS_PANE, " ");
+        for (int i = 0; i < gui.getSize(); i++) {
+            if (gui.getItem(i) == null) {
+                gui.setItem(i, filler);
+            }
+        }
+
+        player.openInventory(gui);
+    }
 
     public static void openWorldSelectionGUI(Player player) {
         Inventory gui = Bukkit.createInventory(null, 27, WORLD_SELECTION_GUI_TITLE); // 27 slots, 3 rows for better spacing
@@ -40,6 +98,13 @@ public class EventManagerGUI {
             // Add a spacer if previous item was added
             if(gui.getItem(slot-1) != null && gui.getItem(slot-1).getType() != Material.AIR) slot++; 
             gui.setItem(slot++, createGuiItem(Material.END_STONE, "§5" + end.getName(), "§7Click to manage game rules and settings", "§7for §5The End§7."));
+        }
+
+        // Add Multiverse Worlds button if Multiverse-Core is enabled
+        if (com.pushkraj.eventmanager.EventManager.isMultiverseEnabled()) {
+            gui.setItem(26, createGuiItem(Material.ENDER_PEARL, "§b🌍 Multiverse Worlds", 
+                "§7Click to view and manage", 
+                "§7all Multiverse worlds."));
         }
 
         // Fill empty slots with glass panes for aesthetics

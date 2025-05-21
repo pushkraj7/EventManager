@@ -15,7 +15,11 @@
       <id>papermc</id>
       <url>https://repo.papermc.io/repository/maven-public/</url>
     </repository>
-  </repositories>
+    <repository>
+      <id>OnARandomBox</id>
+      <url>https://repo.onarandombox.com/content/groups/public/</url>
+    </repository>
+ </repositories>
   <dependencies>
     <dependency>
       <groupId>io.papermc.paper</groupId>
@@ -23,6 +27,13 @@
       <version>1.21.4-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.onarandombox.multiversecore</groupId>
+      <artifactId>Multiverse-Core</artifactId>
+      <version>4.3.12</version>
+      <scope>provided</scope>
+    </dependency>
+
   </dependencies>
   <build>
     <plugins>
