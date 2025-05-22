@@ -11,16 +11,24 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import com.onarandombox.multiversecore.MultiverseCore;
 import com.onarandombox.multiversecore.api.MVWorld;
+import org.pushkraj.eventmanager.util.ErrorHandler;
 
 import java.util.List;
 
 public class EventManagerGUI {
+
+    private static EventManager pluginInstance; // Assuming EventManager has a static getter or you pass it
+
+    public static void init(EventManager plugin) {
+        pluginInstance = plugin;
+    }
 
     public static final String WORLD_SELECTION_GUI_TITLE = "§8§lSelect World to Manage";
     public static final String SETTINGS_GUI_TITLE_PREFIX = "§6§lEvent Manager §8» §7";
     public static final String MULTIVERSE_WORLDS_GUI_TITLE = "§8§lMultiverse Worlds";
 
     public static void openMultiverseWorldsGUI(Player player) {
+        try {
         if (!player.hasPermission("eventmanager.gui.multiverse")) {
             player.sendMessage(ChatColor.RED + "You don't have permission to access Multiverse world settings.");
             return;
@@ -70,10 +78,20 @@ public class EventManagerGUI {
             }
         }
 
-        player.openInventory(gui);
+                    player.openInventory(gui);
+        } catch (Exception e) {
+            ErrorHandler.log("opening Settings GUI for world '" + (world != null ? world.getName() : "unknown") + "'", e, player);
+        }
+        } catch (Exception e) {
+            ErrorHandler.log("opening World Selection GUI", e, player);
+        }
+        } catch (Exception e) {
+            ErrorHandler.log("opening Multiverse Worlds GUI", e, player);
+        }
     }
 
     public static void openWorldSelectionGUI(Player player) {
+        try {
         Inventory gui = Bukkit.createInventory(null, 27, WORLD_SELECTION_GUI_TITLE); // 27 slots, 3 rows for better spacing
 
         List<World> worlds = Bukkit.getWorlds();
@@ -115,10 +133,24 @@ public class EventManagerGUI {
         }
         // Add more worlds if needed, or make it dynamic for all worlds
 
-        player.openInventory(gui);
+                    player.openInventory(gui);
+        } catch (Exception e) {
+            ErrorHandler.log("opening Settings GUI for world '" + (world != null ? world.getName() : "unknown") + "'", e, player);
+        }
+        } catch (Exception e) {
+            ErrorHandler.log("opening World Selection GUI", e, player);
+        }
+        } catch (Exception e) {
+            ErrorHandler.log("opening Multiverse Worlds GUI", e, player);
+        }
     }
 
     public static void openSettingsGUI(Player player, World world) {
+        if (world == null) {
+            ErrorHandler.log("opening Settings GUI", new IllegalArgumentException("World cannot be null when opening settings GUI."), player);
+            return;
+        }
+        try {
         String worldDisplayName = world.getEnvironment() == World.Environment.NORMAL ? "§a" + world.getName()
                             : world.getEnvironment() == World.Environment.NETHER ? "§c" + world.getName()
                             : world.getEnvironment() == World.Environment.THE_END ? "§5" + world.getName()
@@ -261,7 +293,16 @@ public class EventManagerGUI {
             }
         }
 
-        player.openInventory(gui);
+                    player.openInventory(gui);
+        } catch (Exception e) {
+            ErrorHandler.log("opening Settings GUI for world '" + (world != null ? world.getName() : "unknown") + "'", e, player);
+        }
+        } catch (Exception e) {
+            ErrorHandler.log("opening World Selection GUI", e, player);
+        }
+        } catch (Exception e) {
+            ErrorHandler.log("opening Multiverse Worlds GUI", e, player);
+        }
     }
 
     // Original open method is now replaced by openSettingsGUI and openWorldSelectionGUI
