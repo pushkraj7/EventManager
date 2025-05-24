@@ -615,7 +615,6 @@ public class EventManager extends JavaPlugin implements Listener {
             ErrorHandler.log("broadcasting message", e, sender);
         }
     }
-    }
 
     private void saveDimensionAccessConfig() {
         getConfig().set("block-nether", blockNether);
