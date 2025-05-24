@@ -15,6 +15,10 @@
       <id>papermc</id>
       <url>https://repo.papermc.io/repository/maven-public/</url>
     </repository>
+    <repository>
+      <id>glaremasters</id>
+      <url>https://repo.glaremasters.me/repository/public/</url>
+    </repository>
   </repositories>
   <dependencies>
     <dependency>
